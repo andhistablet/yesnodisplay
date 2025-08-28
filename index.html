@@ -28,51 +28,55 @@
   <div id="answer"></div>
   <div id="date"></div>
 
-  <!-- Timezone + Spreadsheet libraries -->
+  <!-- Timezone + CSV Parsing libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.43/moment-timezone-with-data.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/tabletop.js/1.5.4/tabletop.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
   <script>
-    // Replace with your published Google Sheet URL
-    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRXdkA2dHQx1VffPgvfKuec47DYdSTUYyYeDw24tHwkaa-zkYbEX4I4rlUtN7FRzocupRYl0udlRnYn/pub?output=csv";
+    // Replace with your published Google Sheet CSV link
+    const sheetCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRXdkA2dHQx1VffPgvfKuec47DYdSTUYyYeDw24tHwkaa-zkYbEX4I4rlUtN7FRzocupRYl0udlRnYn/pub?output=csv";
 
     function fetchData() {
-      Tabletop.init({
-        key: sheetURL,
-        simpleSheet: true,
-        callback: showData
-      });
-    }
+      Papa.parse(sheetCSV, {
+        download: true,
+        header: true,
+        complete: function(results) {
+          const data = results.data;
 
-    function showData(data) {
-      // Sort rows by date
-      data.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+          // Sort rows by date
+          data.sort((a, b) => new Date(a.Date) - new Date(b.Date));
 
-      // Get current time in CDT
-      const now = moment.tz("America/Chicago");
+          // Get current time in CDT
+          const now = moment.tz("America/Chicago");
 
-      // Find most recent row based on Sunday 3PM cutoff
-      let currentRow = data[0];
-      for (let row of data) {
-        let rowDate = moment.tz(row.Date, "MM/DD/YYYY", "America/Chicago").hour(15); // Sunday 3PM
-        if (now.isSameOrAfter(rowDate)) {
-          currentRow = row;
+          // Find most recent row based on Sunday 3PM cutoff
+          let currentRow = data[0];
+          for (let row of data) {
+            if (!row.Date) continue; // Skip blank rows
+            let rowDate = moment.tz(row.Date, "MM/DD/YYYY", "America/Chicago").hour(15);
+            if (now.isSameOrAfter(rowDate)) {
+              currentRow = row;
+            }
+          }
+
+          // Display YES/NO
+          const answerDiv = document.getElementById("answer");
+          if (currentRow.Answer && currentRow.Answer.toUpperCase() === "YES") {
+            answerDiv.textContent = "YES";
+            answerDiv.style.color = "green";
+          } else {
+            answerDiv.textContent = "NO";
+            answerDiv.style.color = "red";
+          }
+
+          // Display date (pretty format)
+          if (currentRow.Date) {
+            const formattedDate = moment(currentRow.Date, "MM/DD/YYYY").format("dddd, MMMM D, YYYY");
+            document.getElementById("date").textContent = formattedDate;
+          }
         }
-      }
-
-      // Display YES/NO
-      const answerDiv = document.getElementById("answer");
-      if (currentRow.Answer.toUpperCase() === "YES") {
-        answerDiv.textContent = "YES";
-        answerDiv.style.color = "green";
-      } else {
-        answerDiv.textContent = "NO";
-        answerDiv.style.color = "red";
-      }
-
-      // Display date
-      document.getElementById("date").textContent = currentRow.Date;
+      });
     }
 
     // Initial fetch
