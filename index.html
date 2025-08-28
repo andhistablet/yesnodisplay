@@ -2,9 +2,84 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Test Page</title>
+  <title>YES / NO Display</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+    #answer {
+      font-size: 100pt;
+      font-weight: bold;
+    }
+    #date {
+      font-size: 14pt;
+      color: black;
+      margin-top: 20px;
+    }
+  </style>
 </head>
-<body style="display:flex;justify-content:center;align-items:center;height:100vh;font-size:100pt;color:green;">
-  YES
+<body>
+  <div id="answer"></div>
+  <div id="date"></div>
+
+  <!-- Timezone + Spreadsheet libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.43/moment-timezone-with-data.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tabletop.js/1.5.4/tabletop.min.js"></script>
+
+  <script>
+    // Replace with your published Google Sheet URL
+    const sheetURL = "https://docs.google.com/spreadsheets/d/1_Nktin3tOHMbtP8pPY6u8xWmaYw-ox5boaEA259NNiY/edit?usp=sharing";
+
+    function fetchData() {
+      Tabletop.init({
+        key: sheetURL,
+        simpleSheet: true,
+        callback: showData
+      });
+    }
+
+    function showData(data) {
+      // Sort rows by date
+      data.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+
+      // Get current time in CDT
+      const now = moment.tz("America/Chicago");
+
+      // Find most recent row based on Sunday 3PM cutoff
+      let currentRow = data[0];
+      for (let row of data) {
+        let rowDate = moment.tz(row.Date, "MM/DD/YYYY", "America/Chicago").hour(15); // Sunday 3PM
+        if (now.isSameOrAfter(rowDate)) {
+          currentRow = row;
+        }
+      }
+
+      // Display YES/NO
+      const answerDiv = document.getElementById("answer");
+      if (currentRow.Answer.toUpperCase() === "YES") {
+        answerDiv.textContent = "YES";
+        answerDiv.style.color = "green";
+      } else {
+        answerDiv.textContent = "NO";
+        answerDiv.style.color = "red";
+      }
+
+      // Display date
+      document.getElementById("date").textContent = currentRow.Date;
+    }
+
+    // Initial fetch
+    window.addEventListener("DOMContentLoaded", fetchData);
+
+    // Refresh every 60 seconds
+    setInterval(fetchData, 60000);
+  </script>
 </body>
 </html>
