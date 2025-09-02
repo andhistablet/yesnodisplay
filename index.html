@@ -47,22 +47,29 @@
           // Sort rows by date
           data.sort((a, b) => new Date(a.Date) - new Date(b.Date));
 
-          // Get current time in CDT
+          // Current time in CDT
           const now = moment.tz("America/Chicago");
 
-          // Find most recent row based on Sunday 3PM cutoff
-          let currentRow = data[0];
+          let currentRow = null;
+
+          // Find the next upcoming Sunday row
           for (let row of data) {
-            if (!row.Date) continue; // Skip blank rows
-            let rowDate = moment.tz(row.Date, "MM/DD/YYYY", "America/Chicago").hour(15);
-            if (now.isSameOrAfter(rowDate)) {
+            if (!row.Date) continue;
+            let rowDate = moment.tz(row.Date, "MM/DD/YYYY", "America/Chicago").hour(15); // 3PM cutoff
+            if (now.isBefore(rowDate)) {
               currentRow = row;
+              break;
             }
+          }
+
+          // If no future row found, fallback to the last available one
+          if (!currentRow && data.length > 0) {
+            currentRow = data[data.length - 1];
           }
 
           // Display YES/NO
           const answerDiv = document.getElementById("answer");
-          if (currentRow.Answer && currentRow.Answer.toUpperCase() === "YES") {
+          if (currentRow && currentRow.Answer && currentRow.Answer.toUpperCase() === "YES") {
             answerDiv.textContent = "YES";
             answerDiv.style.color = "green";
           } else {
@@ -70,8 +77,8 @@
             answerDiv.style.color = "red";
           }
 
-          // Display date (pretty format)
-          if (currentRow.Date) {
+          // Display date in readable format
+          if (currentRow && currentRow.Date) {
             const formattedDate = moment(currentRow.Date, "MM/DD/YYYY").format("dddd, MMMM D, YYYY");
             document.getElementById("date").textContent = formattedDate;
           }
